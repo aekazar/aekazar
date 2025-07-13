@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Çim Adam - Mor Minyonu Kurtar</title>
+  <style>
+  #infoOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(6px);
+      z-index: 99;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+      font-size: 20px;
+      color: #111;
+    }
+  
+
+  #startButton {
+    margin-top: 30px;
+    padding: 12px 24px;
+    font-size: 18px;
+    background-color: #000;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  .player {
+    background-image: url('cimadam.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    position: absolute;
+    width: 70px;
+    height: 70px;
+  }
+  .platform {
+    background-image: url('platform.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    position: absolute;
+    width: 100px;
+    height: 20px;
+  }
+  .enemy {
+    background-image: url('kral.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    position: absolute;
+  }
+  .goal {
+    background-image: url('morminyon.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    position: absolute;
+    width: 150px;
+    height: 150px;
+  }
+  .checkpoint {
+    background-image: url('check.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    position: absolute;
+     width: 100px;
+    height: 20px;
+  }
+  
+  .spike {
+    background-image: url('trap.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    position: absolute;
+    width: 60px;
+    height: 25px;
+  }
+  .disappearing {
+    background-image: url('platform.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    position: absolute;
+  }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #d0f0c0;
+    }
+    #world {
+      width: 6000px;
+      height: 720px;
+      position: relative;
+      background-image: url('bkgmor.jpg');
+    }
+    /* canvas {
+      display: block;
+      background-color: #a2d149;
+    } */
+  </style>
+  <style>
+  #endOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+    font-size: 20px;
+    color: #111;
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+  }
+
+  #nextInfoButton {
+    margin-top: 30px;
+    padding: 12px 24px;
+    font-size: 18px;
+    background-color: #000;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  </style>
+</head>
+<body>
+<div id="world">
+  <canvas id="gameCanvas" width="6000" height="720"></canvas>
+</div>
+<div id="infoOverlay">
+  <div>
+  <h1>Merhaba Ceren Hanım, hoş geldiniz!</h1>
+<p>Bu oyunda kahramanımız <strong>Çim Adam</strong> ile, kötü kalpli ördeklerin eline düşen sevgilisi <strong>Mor Minyon</strong>'u kurtarmaya çalışacaksınız! 💜🦆</p>
+<p><strong>Kötü kalpli Ördek Kral ve Kraliçe</strong>, Mor Minyon’u kaçırdı ve onu kurtarmak <em>tamamen sizin elinizde</em>! 👑🦆👑</p>
+<p><strong>Amacınız:</strong> Tuzaklarla dolu bu parkuru başarıyla tamamlayarak Mor Minyon'u kurtarmak! 🕳️🪤</p>
+<p><strong>Dikkat!</strong> Bazı platformlar yok olabilir, ördekler size saldırabilir ve düşerseniz en başa dönersiniz. ⛔🐤</p>
+<p><strong>Ok tuşları</strong> ile hareket edin, <strong>yukarı ok</strong> ile zıplayın.</p>
+<p style="font-weight: bold; color: darkgreen;">Unutmayın, bir minyonun hayatı sizin ellerinizde!</p>
+<button id="startButton">Göreve Başla!</button>
+  </div>
+</div>
+<div id="endOverlay">
+  <div>
+    <h1>🎉 Mor Minyon kurtarıldı! Tebrikler!</h1>
+    <p>Çim Adam görevini başarıyla tamamladı ve sevgilisi Mor Minyon'u kurtardı!</p>
+    <p style="margin-top: 10px; font-style: italic; color: darkgreen;">
+      (Garsonumuzdan <strong>Çim Adam</strong> kokteylini istemeyi unutmayın.)
+    </p>
+    <button id="nextInfoButton">Devam Et</button>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const camera = { x: 0, width: 1280 };
+
+const gravity = 0.8;
+const keys = { left: false, right: false, up: false };
+
+const player = {
+  x: 100,
+  y: 600,
+  width: 50,
+  height: 50,
+
+ 
+  dx: 0,
+  dy: 0,
+  speed: 5,
+  jumpPower: -20,
+  grounded: false,
+  startX: 100,
+  startY: 600
+};
+
+const platforms = [
+  { x: 0, y: 680, width: 1280, height: 40 },
+  { x: 300, y: 600, width: 200, height: 20 },
+  { x: 600, y: 520, width: 200, height: 20 },
+  { x: 900, y: 440, width: 200, height: 20 },
+  { x: 1150, y: 360, width: 100, height: 20 },
+  { x: 1400, y: 600, width: 200, height: 20 },
+  { x: 1700, y: 520, width: 200, height: 20 },
+  { x: 2000, y: 440, width: 200, height: 20 },
+  { x: 2300, y: 360, width: 100, height: 20 },
+  { x: 2600, y: 280, width: 100, height: 20 },
+  { x: 2900, y: 200, width: 150, height: 20 },
+  { x: 3100, y: 600, width: 200, height: 20 },
+  { x: 3200, y: 600, width: 200, height: 20 },
+  { x: 3450, y: 520, width: 150, height: 20 },
+  { x: 3700, y: 600, width: 100, height: 20 },
+  { x: 3900, y: 520, width: 150, height: 20 },
+  { x: 4150, y: 440, width: 200, height: 20 },
+  { x: 4400, y: 360, width: 100, height: 20 },
+  { x: 4600, y: 600, width: 200, height: 20 },
+  { x: 4850, y: 540, width: 200, height: 20 },
+  { x: 5100, y: 500, width: 150, height: 20 },
+  { x: 5350, y: 460, width: 120, height: 20 },
+  { x: 5800, y: 610, width: 100, height: 20 }, // Platform under goal
+  { x: 5900, y: 670, width: 100, height: 20 }
+];
+
+let disappearingPlatforms = [
+  { x: 5700, y: 400, width: 150, height: 20, visible: true, timer: 0 }
+];
+
+const spikes = [
+  { x: 500, y: 663, width: 40, height: 17 },
+  { x: 800, y: 663, width: 40, height: 17 },
+  { x: 3350, y: 663, width: 40, height: 17 },
+  { x: 3600, y: 663, width: 40, height: 17 }
+];
+
+const enemies = [
+  { x: 650, y: 490, width: 40, height: 40, direction: 1 },
+  { x: 3500, y: 500, width: 40, height: 40, direction: 1 },
+  { x: 4800, y: 500, width: 40, height: 40, direction: -1 },
+  { x: 5500, y: 360, width: 40, height: 40, direction: 1, type: "flying" }
+];
+
+const checkpoint = { x: 3120, y: 550, width: 30, height: 50, reached: false };
+const goal = { x: 5900, y: 570, width: 150, height: 150 };
+
+// Remove canvas-based drawing. Use DOM for rendering.
+function drawAll() {
+  const world = document.getElementById('world');
+  world.innerHTML = ''; // clear previous
+
+  const makeDiv = (obj, className) => {
+    const div = document.createElement('div');
+    div.className = className;
+    div.style.left = (obj.x - camera.x) + 'px';
+    div.style.top = obj.y + 'px';
+    div.style.width = obj.width + 'px';
+    div.style.height = obj.height + 'px';
+    if (className === 'platform') {
+      div.style.backgroundSize = `${obj.width}px ${obj.height}px`;
+    }
+    world.appendChild(div);
+  };
+
+  makeDiv(player, 'player');
+  platforms.forEach(p => makeDiv(p, 'platform'));
+  spikes.forEach(s => makeDiv(s, 'spike'));
+  enemies.forEach(e => makeDiv(e, 'enemy'));
+  disappearingPlatforms.forEach(p => { if (p.visible) makeDiv(p, 'disappearing'); });
+  makeDiv(checkpoint, 'checkpoint');
+  makeDiv(goal, 'goal');
+}
+
+function handleInput() {
+  player.dx = 0;
+  if (keys.left) player.dx = -player.speed;
+  if (keys.right) player.dx = player.speed;
+}
+
+function applyPhysics() {
+  player.dy += gravity;
+  player.x += player.dx;
+  player.y += player.dy;
+  player.grounded = false;
+
+  platforms.forEach(p => {
+    if (
+      player.x < p.x + p.width &&
+      player.x + player.width > p.x &&
+      player.y + player.height < p.y + 10 &&
+      player.y + player.height + player.dy >= p.y
+    ) {
+      player.y = p.y - player.height;
+      player.dy = 0;
+      player.grounded = true;
+    }
+  });
+
+  disappearingPlatforms.forEach(p => {
+    if (p.visible &&
+        player.x < p.x + p.width &&
+        player.x + player.width > p.x &&
+        player.y + player.height < p.y + 10 &&
+        player.y + player.height + player.dy >= p.y
+    ) {
+      player.y = p.y - player.height;
+      player.dy = 0;
+      player.grounded = true;
+      p.timer += 1;
+      if (p.timer > 60) p.visible = false;
+    }
+  });
+
+  spikes.forEach(s => {
+    if (
+      player.x < s.x + s.width &&
+      player.x + player.width > s.x &&
+      player.y + player.height > s.y &&
+      player.y < s.y + s.height
+    ) {
+      resetGame();
+    }
+  });
+
+  enemies.forEach(e => {
+    if (
+      player.x < e.x + e.width &&
+      player.x + player.width > e.x &&
+      player.y + player.height > e.y &&
+      player.y < e.y + e.height
+    ) {
+      resetGame();
+    }
+  });
+
+  if (
+    player.x < checkpoint.x + checkpoint.width &&
+    player.x + player.width > checkpoint.x &&
+    player.y + player.height > checkpoint.y &&
+    player.y < checkpoint.y + checkpoint.height
+  ) {
+    checkpoint.reached = true;
+  }
+
+  if (
+    player.x < goal.x + goal.width &&
+    player.x + player.width > goal.x &&
+    player.y + player.height > goal.y &&
+    player.y < goal.y + goal.height
+  ) {
+    document.getElementById("endOverlay").style.display = "flex";
+    return; // prevent reset
+  }
+
+  if (player.y > canvas.height) {
+    resetGame();
+  }
+}
+
+function moveEnemies() {
+  enemies.forEach(e => {
+    if (e.type === "flying") {
+      e.x += e.direction * 2;
+      if (e.x < 5450 || e.x > 5650) e.direction *= -1;
+    } else {
+      e.x += e.direction * 2;
+      if (e === enemies[0]) {
+        if (e.x < 620 || e.x > 860) e.direction *= -1;
+      } else if (e === enemies[1]) {
+        if (e.x < 3470 || e.x > 3590) e.direction *= -1;
+      } else if (e === enemies[2]) {
+        if (e.x < 4780 || e.x > 4920) e.direction *= -1;
+      }
+    }
+  });
+}
+
+function resetGame() {
+  if (checkpoint.reached) {
+    player.x = checkpoint.x;
+    player.y = checkpoint.y - player.height;
+  } else {
+    player.x = player.startX;
+    player.y = player.startY;
+  }
+  player.dy = 0;
+  player.dx = 0;
+
+  // Reset disappearing platforms
+  disappearingPlatforms = [
+    { x: 5700, y: 400, width: 150, height: 20, visible: true, timer: 0 }
+  ];
+}
+
+function update() {
+  handleInput();
+  camera.x = player.x - camera.width / 2;
+  camera.x = Math.max(0, Math.min(camera.x, canvas.width - camera.width));
+  applyPhysics();
+  moveEnemies();
+  drawAll();
+  requestAnimationFrame(update);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") keys.left = true;
+  if (e.key === "ArrowRight") keys.right = true;
+  if (e.key === "ArrowUp" && player.grounded) {
+    player.dy = player.jumpPower;
+    player.grounded = false;
+  }
+});
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft") keys.left = false;
+  if (e.key === "ArrowRight") keys.right = false;
+});
+
+update();
+</script>
+<audio id="gameMusic">
+  <source src="morminyonmuzik.mp3" type="audio/mpeg">
+</audio>
+</script>
+<script>
+document.getElementById("startButton").addEventListener("click", () => {
+  document.getElementById("infoOverlay").style.display = "none";
+  const music = document.getElementById("gameMusic");
+  music.play();
+});
+document.getElementById("nextInfoButton").addEventListener("click", () => {
+  window.location.href = "menudenonce.html";
+});
+</script>
+</body>
+</html>
