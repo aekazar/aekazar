@@ -65,23 +65,6 @@
     <button onclick="continueSite()">Devam Et</button>
   </div>
 
-  <script>
-    function checkPassword() {
-      const correctPassword = "05335022680";
-      const input = document.getElementById("password").value;
-      if (input === correctPassword) {
-        document.getElementById("passwordScreen").classList.remove("active");
-        document.getElementById("welcomeScreen").classList.add("active");
-        document.getElementById("arkaPlanMuzik").play();
-      } else {
-        alert("Şifre yanlış! Lütfen tekrar deneyin.");
-      }
-    }
-
-    function continueSite() {
-      window.location.href = "oyun_once_bilgi.html";
-    }
-  </script>
 
 </body>
 </html>
